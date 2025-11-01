@@ -97,6 +97,36 @@ async function readInput(prompt: string): Promise<string | null> {
   return new TextDecoder().decode(buf.subarray(0, n)).trim();
 }
 
+function formatToolInput(input: any): string {
+  if (!input || Object.keys(input).length === 0) {
+    return "";
+  }
+
+  // Format tool input for display - show key parameters
+  const parts: string[] = [];
+
+  for (const [key, value] of Object.entries(input)) {
+    let displayValue: string;
+
+    if (typeof value === "string") {
+      // Truncate long strings
+      if (value.length > 60) {
+        displayValue = `"${value.substring(0, 60)}..."`;
+      } else {
+        displayValue = `"${value}"`;
+      }
+    } else if (typeof value === "object" && value !== null) {
+      displayValue = "{...}";
+    } else {
+      displayValue = String(value);
+    }
+
+    parts.push(`${key}: ${displayValue}`);
+  }
+
+  return parts.join(", ");
+}
+
 async function loadImageAsBase64(
   imagePath: string
 ): Promise<{ media_type: string; data: string } | null> {
@@ -174,6 +204,8 @@ async function main() {
 
       let assistantResponse = "";
       let currentToolUse = false;
+      let currentToolName = "";
+      let currentToolInput: any = {};
 
       // Stream and display messages
       for await (const message of queryInstance) {
@@ -194,6 +226,15 @@ async function main() {
               if (delta.type === "text_delta") {
                 // Stream text as it arrives
                 await Deno.stdout.write(new TextEncoder().encode(delta.text));
+              } else if (delta.type === "input_json_delta") {
+                // Accumulate tool input during streaming
+                try {
+                  const partialJson = delta.partial_json;
+                  // Merge partial JSON into current tool input
+                  currentToolInput = { ...currentToolInput, ...JSON.parse(partialJson) };
+                } catch {
+                  // Ignore parse errors for incomplete JSON
+                }
               }
             } else if (message.event.type === "content_block_start") {
               const block = message.event.content_block;
@@ -208,9 +249,31 @@ async function main() {
                 }
               } else if (block.type === "tool_use") {
                 currentToolUse = true;
+                currentToolName = block.name;
+                currentToolInput = block.input || {};
+                // Display tool call indicator - params will show on stop
+                await Deno.stdout.write(
+                  new TextEncoder().encode(
+                    `${colors.dim}→ ${colors.cyan}${currentToolName}${colors.reset}`
+                  )
+                );
               }
             } else if (message.event.type === "content_block_stop") {
-              if (!currentToolUse) {
+              if (currentToolUse) {
+                // Show complete tool call with accumulated parameters
+                const formattedInput = formatToolInput(currentToolInput);
+                if (formattedInput) {
+                  await Deno.stdout.write(
+                    new TextEncoder().encode(
+                      `${colors.dim}(${formattedInput})${colors.reset}\n`
+                    )
+                  );
+                } else {
+                  await Deno.stdout.write(new TextEncoder().encode("\n"));
+                }
+                currentToolName = "";
+                currentToolInput = {};
+              } else {
                 await Deno.stdout.write(new TextEncoder().encode("\n"));
               }
               currentToolUse = false;
@@ -218,10 +281,13 @@ async function main() {
             break;
 
           case "assistant":
-            // Collect full assistant response
+            // Display tool calls and collect response
             for (const block of message.message.content) {
               if (block.type === "text") {
                 assistantResponse += block.text;
+              } else if (block.type === "tool_use") {
+                // This displays complete tool info after streaming starts
+                // Only show if we haven't already shown it during streaming
               }
             }
             break;

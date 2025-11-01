@@ -1,0 +1,20 @@
+# OPTIONAL: Fallback configuration if 1Password CLI is not available
+# Copy this file to .envrc.local if you want to use environment variables
+# instead of 1Password CLI for secrets management
+
+# NOTE: By default, .envrc uses 1Password CLI with:
+#   op://CLI/ANTHROPIC_API_KEY/credential
+#
+# This file is only sourced as a fallback if 1Password CLI is unavailable
+
+export ANTHROPIC_API_KEY=your_api_key_here
+
+# Optional: Use Amazon Bedrock instead
+# export CLAUDE_CODE_USE_BEDROCK=1
+# export AWS_REGION=us-west-2
+# export AWS_ACCESS_KEY_ID=your_key
+# export AWS_SECRET_ACCESS_KEY=your_secret
+
+# Optional: Use Google Vertex AI instead
+# export CLAUDE_CODE_USE_VERTEX=1
+# export GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json

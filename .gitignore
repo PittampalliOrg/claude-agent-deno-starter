@@ -1,0 +1,23 @@
+# Environment variables
+.env
+.envrc.local
+
+# Nix
+.direnv/
+result
+result-*
+.npm-global/
+
+# Deno cache
+.deno/
+
+# Claude session data
+.claude/
+.claude-data/
+
+# Node modules (if any)
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db

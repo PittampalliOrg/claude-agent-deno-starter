@@ -144,11 +144,30 @@ async function main() {
           executable: "deno",
           executableArgs: ["--allow-all"],
           model: "claude-sonnet-4-20250514",
-          permissionMode: "bypassPermissions",
+          permissionMode: "bypassPermissions", // Auto-approve all tools
           systemPrompt: {
             type: "preset",
             preset: "claude_code",
           },
+          // Explicitly enable all default Claude Code tools
+          allowedTools: [
+            "Task",           // Launch subagents for complex tasks
+            "Bash",           // Execute shell commands
+            "BashOutput",     // Read background shell output
+            "Edit",           // Edit files with string replacement
+            "Read",           // Read files, images, PDFs, notebooks
+            "Write",          // Write/create files
+            "Glob",           // File pattern matching
+            "Grep",           // Search file contents with regex
+            "KillShell",      // Terminate background shells
+            "NotebookEdit",   // Edit Jupyter notebooks
+            "WebFetch",       // Fetch and analyze web content
+            "WebSearch",      // Search the web
+            "TodoWrite",      // Manage task lists
+            "ExitPlanMode",   // Exit planning mode
+            "ListMcpResources", // List MCP resources
+            "ReadMcpResource",  // Read MCP resources
+          ],
           includePartialMessages: true, // Enable streaming output
         },
       });

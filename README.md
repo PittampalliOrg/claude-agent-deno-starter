@@ -121,7 +121,7 @@ The interactive CLI includes:
 
 ## Configuration
 
-The application uses streaming input mode with these options:
+The application uses streaming input mode with all default Claude Code tools enabled:
 
 ```typescript
 const result = query({
@@ -130,15 +130,72 @@ const result = query({
     executable: "deno",              // Use Deno runtime
     executableArgs: ["--allow-all"], // Pass permissions
     model: "claude-sonnet-4-20250514", // Latest Sonnet
-    permissionMode: "bypassPermissions", // Auto-approve
+    permissionMode: "bypassPermissions", // Auto-approve all tools
     systemPrompt: {
       type: "preset",
       preset: "claude_code"          // Use Claude Code prompt
     },
+    // All default Claude Code tools enabled
+    allowedTools: [
+      "Task",           // Launch subagents for complex tasks
+      "Bash",           // Execute shell commands
+      "BashOutput",     // Read background shell output
+      "Edit",           // Edit files with string replacement
+      "Read",           // Read files, images, PDFs, notebooks
+      "Write",          // Write/create files
+      "Glob",           // File pattern matching
+      "Grep",           // Search file contents with regex
+      "KillShell",      // Terminate background shells
+      "NotebookEdit",   // Edit Jupyter notebooks
+      "WebFetch",       // Fetch and analyze web content
+      "WebSearch",      // Search the web
+      "TodoWrite",      // Manage task lists
+      "ExitPlanMode",   // Exit planning mode
+      "ListMcpResources", // List MCP resources
+      "ReadMcpResource",  // Read MCP resources
+    ],
     includePartialMessages: true     // Enable real-time streaming
   }
 });
 ```
+
+### Available Tools
+
+The CLI has access to all 16 default Claude Code tools:
+
+**File Operations:**
+- `Read` - Read files, images, PDFs, and Jupyter notebooks
+- `Write` - Create or overwrite files
+- `Edit` - Edit files with exact string replacement
+- `Glob` - Find files using glob patterns
+- `Grep` - Search file contents with regex
+
+**Execution:**
+- `Bash` - Execute shell commands
+- `BashOutput` - Monitor background shell output
+- `KillShell` - Terminate background processes
+
+**Advanced:**
+- `Task` - Launch specialized subagents for complex tasks
+- `NotebookEdit` - Edit Jupyter notebook cells
+- `WebFetch` - Fetch and analyze web pages
+- `WebSearch` - Search the web
+- `TodoWrite` - Manage task lists
+- `ExitPlanMode` - Exit planning mode
+- `ListMcpResources` - List MCP server resources
+- `ReadMcpResource` - Read MCP resources
+
+### Permission Configuration
+
+The application uses `permissionMode: "bypassPermissions"` to automatically approve all tool usage without prompts. This is ideal for:
+- Development environments
+- Trusted automation scripts
+- Rapid prototyping
+
+**Note:** For production use or untrusted environments, consider using:
+- `permissionMode: "default"` with a `canUseTool` callback for manual approval
+- `permissionMode: "acceptEdits"` to auto-approve only file edits
+- Custom permission rules via hooks
 
 ## Project Structure
 

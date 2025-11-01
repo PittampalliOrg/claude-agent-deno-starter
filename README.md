@@ -64,27 +64,27 @@ Once the CLI is running, you can use these commands:
 - **Type any message** - Chat with Claude
 - `/help` - Show available commands
 - `/clear` - Clear the screen
+- `/image <path>` - Attach an image to your next message
 - `/exit` or `/quit` - Exit the CLI
 
 ### Example Session
 
 ```
 ╔═══════════════════════════════════════════════╗
-║       Claude Interactive CLI (Deno)          ║
+║   Claude Interactive CLI (Streaming Mode)    ║
 ╚═══════════════════════════════════════════════╝
 Type your message and press Enter to chat with Claude.
-Commands: /exit, /quit, /help, /clear
+Commands: /exit, /quit, /help, /clear, /image
 
-You: Hello! What is 2 + 2?
-Session: 0b1d971f...
+You: What is 2 + 2?
+Session: acdf0652... [Streaming Mode]
 
 Claude: 2 + 2 = 4
-
-[1.85s | $0.0011 | 8→13 tokens]
+[2.16s | $0.0009 | 3→13 tokens]
 
 You: /exit
 
-Goodbye! 👋
+Goodbye!
 ```
 
 ## How It Works
@@ -110,20 +110,22 @@ Goodbye! 👋
 ## Features
 
 The interactive CLI includes:
-- Real-time streaming responses from Claude
-- Color-coded output for better readability
-- Session tracking
-- Cost and token usage display
-- Command history (use arrow keys)
-- Graceful error handling
+- **Streaming Input Mode**: Advanced message queue with AsyncGenerator for continuous conversations
+- **Image Support**: Attach images to messages using the `/image` command with base64 encoding
+- **Real-time Streaming**: Partial message streaming with `includePartialMessages` for live responses
+- **Session Management**: Persistent session tracking across multiple message turns
+- **Color-coded Output**: Better readability with ANSI color codes
+- **Cost Tracking**: Display duration, cost, and token usage for each interaction
+- **Graceful EOF Handling**: Properly handles piped input and interactive mode
+- **Command History**: Use arrow keys to navigate previous commands (interactive mode)
 
 ## Configuration
 
-The application is configured with:
+The application uses streaming input mode with these options:
 
 ```typescript
 const result = query({
-  prompt: userInput,
+  prompt: messageQueue.generate(),  // AsyncGenerator for streaming input
   options: {
     executable: "deno",              // Use Deno runtime
     executableArgs: ["--allow-all"], // Pass permissions
@@ -132,7 +134,8 @@ const result = query({
     systemPrompt: {
       type: "preset",
       preset: "claude_code"          // Use Claude Code prompt
-    }
+    },
+    includePartialMessages: true     // Enable real-time streaming
   }
 });
 ```

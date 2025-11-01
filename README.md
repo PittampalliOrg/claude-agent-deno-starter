@@ -1,46 +1,203 @@
-# Documentation
+# Claude Interactive CLI (Deno)
 
-This directory contains documentation for the Claude Agent SDK and related topics.
+An interactive command-line interface for Claude using the Claude Agent SDK with Deno, Nix, and 1Password integration.
 
-## Getting Started
+## Prerequisites
 
-- [SETUP.md](SETUP.md) - Complete setup guide for Nix, direnv, and the development environment
-- [1PASSWORD.md](1PASSWORD.md) - 1Password CLI integration for secure API key management
+Only these tools are required - all other dependencies are managed by Nix:
 
-## Claude Agent SDK Documentation
+1. **Nix** with flakes enabled
+2. **direnv** for automatic environment loading
 
-### Core Concepts
-- [overview.md](overview.md) - SDK overview and core concepts
-- [typescript.md](typescript.md) - Complete TypeScript SDK API reference
+See [docs/SETUP.md](docs/SETUP.md) for detailed installation instructions.
 
-### Configuration & Customization
-- [modifying-system-prompts.md](modifying-system-prompts.md) - How to customize system prompts
-- [permissions.md](permissions.md) - Tool permissions and security
-- [sessions.md](sessions.md) - Session management and persistence
+## Setup
 
-### Advanced Features
-- [custom-tools.md](custom-tools.md) - Creating custom tools
-- [mcp.md](mcp.md) - Model Context Protocol integration
-- [plugins.md](plugins.md) - Plugin system
-- [skills.md](skills.md) - Agent skills
-- [subagents.md](subagents.md) - Using specialized subagents
-- [slash-commands.md](slash-commands.md) - Custom slash commands
+1. Clone or navigate to this directory and allow direnv:
+   ```bash
+   cd /path/to/sdk
+   direnv allow
+   ```
 
-### Operational Guides
-- [hosting.md](hosting.md) - Deployment and hosting strategies
-- [cost-tracking.md](cost-tracking.md) - Monitoring and optimizing costs
-- [streaming-vs-single-mode.md](streaming-vs-single-mode.md) - Input modes explained
-- [todo-tracking.md](todo-tracking.md) - Todo tracking features
+   This will:
+   - Install Deno, Node.js, 1Password CLI, and other dependencies via Nix
+   - Install Claude Code CLI to `.npm-global/`
+   - Set up the development environment automatically
 
-## Quick Links
+2. Set your Anthropic API key:
 
-### Development
-- [Main Application](../main.ts) - Example Deno application
-- [Nix Flake](../flake.nix) - Development environment definition
-- [direnv Config](../.envrc) - Environment loader configuration
+   **Option A:** Retrieve from 1Password and store in `.envrc.local`:
+   ```bash
+   # Get your API key from 1Password
+   API_KEY=$(op read "op://CLI/ANTHROPIC_API_KEY/credential")
 
-### External Resources
-- [Claude Agent SDK (Official)](https://docs.claude.com/en/api/agent-sdk/overview)
-- [Anthropic Console](https://console.anthropic.com/)
+   # Store it in .envrc.local
+   cat > .envrc.local << EOF
+   export ANTHROPIC_API_KEY=$API_KEY
+   EOF
+
+   # Reload direnv
+   direnv allow
+   ```
+
+   **Option B:** Set directly in `.envrc.local`:
+   ```bash
+   cat > .envrc.local << 'EOF'
+   export ANTHROPIC_API_KEY=sk-ant-your-api-key-here
+   EOF
+
+   direnv allow
+   ```
+
+3. Get your API key from the [Anthropic Console](https://console.anthropic.com/)
+
+## Running the Interactive CLI
+
+```bash
+deno task start
+```
+
+### Interactive Commands
+
+Once the CLI is running, you can use these commands:
+
+- **Type any message** - Chat with Claude
+- `/help` - Show available commands
+- `/clear` - Clear the screen
+- `/exit` or `/quit` - Exit the CLI
+
+### Example Session
+
+```
+╔═══════════════════════════════════════════════╗
+║       Claude Interactive CLI (Deno)          ║
+╚═══════════════════════════════════════════════╝
+Type your message and press Enter to chat with Claude.
+Commands: /exit, /quit, /help, /clear
+
+You: Hello! What is 2 + 2?
+Session: 0b1d971f...
+
+Claude: 2 + 2 = 4
+
+[1.85s | $0.0011 | 8→13 tokens]
+
+You: /exit
+
+Goodbye! 👋
+```
+
+## How It Works
+
+### Nix Flake (`flake.nix`)
+- Provides Deno, Node.js 20, 1Password CLI, and development tools
+- Creates isolated environment with pinned versions
+- Automatically installs Claude Code CLI on first run
+
+### direnv (`.envrc`)
+- Automatically loads the Nix environment when you `cd` into the directory
+- Loads `.envrc.local` for API keys (gitignored)
+- Sets up npm global path for Claude Code CLI
+
+### Benefits
+- ✓ **Interactive REPL**: Chat with Claude in real-time
+- ✓ **Reproducible**: Same versions across all machines
+- ✓ **Isolated**: Dependencies don't conflict with system packages
+- ✓ **Automatic**: Environment loads/unloads when entering/leaving directory
+- ✓ **No global installs**: Everything is project-local
+- ✓ **Secure secrets**: API keys managed securely
+
+## Features
+
+The interactive CLI includes:
+- Real-time streaming responses from Claude
+- Color-coded output for better readability
+- Session tracking
+- Cost and token usage display
+- Command history (use arrow keys)
+- Graceful error handling
+
+## Configuration
+
+The application is configured with:
+
+```typescript
+const result = query({
+  prompt: userInput,
+  options: {
+    executable: "deno",              // Use Deno runtime
+    executableArgs: ["--allow-all"], // Pass permissions
+    model: "claude-sonnet-4-20250514", // Latest Sonnet
+    permissionMode: "bypassPermissions", // Auto-approve
+    systemPrompt: {
+      type: "preset",
+      preset: "claude_code"          // Use Claude Code prompt
+    }
+  }
+});
+```
+
+## Project Structure
+
+```
+.
+├── flake.nix              # Nix flake for dependencies
+├── .envrc                 # direnv configuration
+├── .envrc.local.example   # Example environment variables
+├── deno.json              # Deno configuration and tasks
+├── main.ts                # Interactive CLI application
+├── .gitignore             # Git ignore rules
+└── docs/                  # All documentation
+    ├── README.md          # Documentation index
+    ├── SETUP.md           # Detailed setup guide
+    ├── 1PASSWORD.md       # 1Password integration guide
+    └── ... (SDK docs)
+```
+
+## Troubleshooting
+
+### API key not set
+
+If you see "ANTHROPIC_API_KEY not set" warnings:
+
+1. Make sure you created `.envrc.local`
+2. Check that it exports the API key: `cat .envrc.local`
+3. Reload direnv: `direnv allow`
+4. Verify: `echo $ANTHROPIC_API_KEY`
+
+### Claude Code CLI not found
+
+If you get "claude: command not found":
+
+1. Exit and re-enter the directory
+2. Or manually reload: `direnv reload`
+3. Check `.npm-global/bin/` exists and is in PATH
+
+### Permission errors
+
+If you get permission errors when running:
+
+1. Make sure you're using `deno task start` (includes `--allow-all`)
+2. Or run directly: `deno run --allow-all main.ts`
+
+## Next Steps
+
+- Modify the prompt in `main.ts` to customize behavior
+- Explore other permission modes: `default`, `acceptEdits`, `plan`
+- Add custom tools with MCP servers
+- Implement custom system prompts
+- Add conversation history persistence
+
+## Documentation
+
+### Local Documentation
+- [docs/SETUP.md](docs/SETUP.md) - Detailed setup guide
+- [docs/1PASSWORD.md](docs/1PASSWORD.md) - 1Password CLI integration
+- [docs/overview.md](docs/overview.md) - SDK overview
+- [docs/typescript.md](docs/typescript.md) - TypeScript SDK reference
+- [docs/hosting.md](docs/hosting.md) - Hosting and deployment guide
+
+### Official Documentation
+- [Claude Agent SDK Overview](https://docs.claude.com/en/api/agent-sdk/overview)
+- [TypeScript SDK Reference](https://docs.claude.com/en/api/agent-sdk/typescript)
 - [Deno Documentation](https://deno.land/manual)
-- [Nix Flakes](https://nixos.wiki/wiki/Flakes)

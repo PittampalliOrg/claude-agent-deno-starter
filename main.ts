@@ -3,70 +3,143 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
 /**
- * Minimal Claude Agent SDK example using Deno
+ * Interactive Claude CLI - A REPL for Claude Code Agent SDK
  */
-async function main() {
-  console.log("Starting Claude Agent SDK with Deno...\n");
 
+// ANSI color codes for better UX
+const colors = {
+  reset: "\x1b[0m",
+  bright: "\x1b[1m",
+  dim: "\x1b[2m",
+  cyan: "\x1b[36m",
+  green: "\x1b[32m",
+  yellow: "\x1b[33m",
+  blue: "\x1b[34m",
+  magenta: "\x1b[35m",
+  red: "\x1b[31m",
+};
+
+function printWelcome() {
+  console.log(`${colors.bright}${colors.cyan}`);
+  console.log("╔═══════════════════════════════════════════════╗");
+  console.log("║       Claude Interactive CLI (Deno)          ║");
+  console.log("╚═══════════════════════════════════════════════╝");
+  console.log(colors.reset);
+  console.log(`${colors.dim}Type your message and press Enter to chat with Claude.`);
+  console.log(`Commands: /exit, /quit, /help, /clear${colors.reset}\n`);
+}
+
+function printHelp() {
+  console.log(`\n${colors.bright}Available Commands:${colors.reset}`);
+  console.log(`  ${colors.cyan}/help${colors.reset}   - Show this help message`);
+  console.log(`  ${colors.cyan}/exit${colors.reset}   - Exit the CLI`);
+  console.log(`  ${colors.cyan}/quit${colors.reset}   - Exit the CLI`);
+  console.log(`  ${colors.cyan}/clear${colors.reset}  - Clear the screen\n`);
+}
+
+async function readInput(prompt: string): Promise<string> {
+  // Write prompt to stdout
+  await Deno.stdout.write(new TextEncoder().encode(prompt));
+
+  // Read line from stdin
+  const buf = new Uint8Array(1024);
+  const n = await Deno.stdin.read(buf);
+  if (n === null) return "";
+
+  return new TextDecoder().decode(buf.subarray(0, n)).trim();
+}
+
+async function handleQuery(userPrompt: string) {
   try {
-    // Create a query with minimal configuration
     const result = query({
-      prompt: "What is 2 + 2? Just give me the answer.",
+      prompt: userPrompt,
       options: {
-        executable: "deno", // Explicitly use Deno runtime
-        executableArgs: ["--allow-all"], // Pass permissions to Deno subprocess
-        model: "claude-sonnet-4-20250514", // Latest Sonnet model
-        permissionMode: "bypassPermissions", // Auto-approve all actions for demo
+        executable: "deno",
+        executableArgs: ["--allow-all"],
+        model: "claude-sonnet-4-20250514",
+        permissionMode: "bypassPermissions",
         systemPrompt: {
           type: "preset",
-          preset: "claude_code", // Use Claude Code's system prompt
-        },
-        stderr: (data: string) => {
-          // Log stderr from Claude Code process
-          console.error("Claude Code stderr:", data);
+          preset: "claude_code",
         },
       },
     });
 
-    // Stream and display messages as they arrive
+    let sessionId = "";
+    let assistantResponse = "";
+    let isFirstMessage = true;
+
+    // Stream and display messages
     for await (const message of result) {
       switch (message.type) {
         case "system":
           if (message.subtype === "init") {
-            console.log("✓ Session initialized");
-            console.log(`  Model: ${message.model}`);
-            console.log(`  Session ID: ${message.session_id}`);
-            console.log(`  Tools available: ${message.tools.length}\n`);
+            sessionId = message.session_id;
+            if (isFirstMessage) {
+              console.log(
+                `${colors.dim}Session: ${sessionId.slice(0, 8)}...${colors.reset}\n`
+              );
+              isFirstMessage = false;
+            }
           }
           break;
 
         case "assistant":
-          // Display assistant's text responses
+          // Collect assistant's text responses
           for (const block of message.message.content) {
             if (block.type === "text") {
-              console.log(`🤖 Claude: ${block.text}\n`);
+              assistantResponse += block.text;
             }
           }
           break;
 
         case "result":
           if (message.subtype === "success") {
-            console.log("✓ Query completed successfully");
-            console.log(`  Duration: ${(message.duration_ms / 1000).toFixed(2)}s`);
-            console.log(`  Turns: ${message.num_turns}`);
-            console.log(`  Cost: $${message.total_cost_usd.toFixed(4)}`);
+            // Print the complete response
+            console.log(`${colors.bright}${colors.green}Claude:${colors.reset} ${assistantResponse}\n`);
             console.log(
-              `  Tokens: ${message.usage.input_tokens} in, ${message.usage.output_tokens} out`
+              `${colors.dim}[${(message.duration_ms / 1000).toFixed(2)}s | $${message.total_cost_usd.toFixed(4)} | ${message.usage.input_tokens}→${message.usage.output_tokens} tokens]${colors.reset}\n`
             );
           } else {
-            console.error(`✗ Query failed: ${message.subtype}`);
+            console.error(`${colors.red}✗ Query failed: ${message.subtype}${colors.reset}\n`);
           }
           break;
       }
     }
   } catch (error) {
-    console.error("Error:", error.message);
-    Deno.exit(1);
+    console.error(`${colors.red}Error: ${error.message}${colors.reset}\n`);
+  }
+}
+
+async function main() {
+  printWelcome();
+
+  // Interactive REPL loop
+  while (true) {
+    const input = await readInput(`${colors.bright}${colors.blue}You:${colors.reset} `);
+
+    // Handle empty input
+    if (!input) {
+      continue;
+    }
+
+    // Handle commands
+    const command = input.toLowerCase().trim();
+
+    if (command === "/exit" || command === "/quit") {
+      console.log(`\n${colors.cyan}Goodbye! 👋${colors.reset}`);
+      Deno.exit(0);
+    } else if (command === "/help") {
+      printHelp();
+      continue;
+    } else if (command === "/clear") {
+      console.clear();
+      printWelcome();
+      continue;
+    }
+
+    // Process the query
+    await handleQuery(input);
   }
 }
 

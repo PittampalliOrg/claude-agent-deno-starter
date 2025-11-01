@@ -1,13 +1,17 @@
-# OPTIONAL: Fallback configuration if 1Password CLI is not available
-# Copy this file to .envrc.local if you want to use environment variables
-# instead of 1Password CLI for secrets management
+# Copy this file to .envrc.local and add your secrets
+# .envrc.local is gitignored and will be sourced by direnv
 
-# NOTE: By default, .envrc uses 1Password CLI with:
-#   op://CLI/ANTHROPIC_API_KEY/credential
-#
-# This file is only sourced as a fallback if 1Password CLI is unavailable
+# OPTION 1: Use 1Password Service Account (Recommended for automation)
+# ======================================================================
+# Set your 1Password service account token here
+# The .envrc will use this to automatically retrieve ANTHROPIC_API_KEY
+# Get your service account token from: https://my.1password.com/developer-tools/infrastructure-secrets/
+export OP_SERVICE_ACCOUNT_TOKEN=your_service_account_token_here
 
-export ANTHROPIC_API_KEY=your_api_key_here
+# OPTION 2: Set API key directly (Simpler, less secure)
+# ======================================================
+# Uncomment and set your API key directly if not using 1Password
+# export ANTHROPIC_API_KEY=sk-ant-your-api-key-here
 
 # Optional: Use Amazon Bedrock instead
 # export CLAUDE_CODE_USE_BEDROCK=1

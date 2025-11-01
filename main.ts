@@ -14,11 +14,16 @@ async function main() {
       prompt: "What is 2 + 2? Just give me the answer.",
       options: {
         executable: "deno", // Explicitly use Deno runtime
+        executableArgs: ["--allow-all"], // Pass permissions to Deno subprocess
         model: "claude-sonnet-4-20250514", // Latest Sonnet model
         permissionMode: "bypassPermissions", // Auto-approve all actions for demo
         systemPrompt: {
           type: "preset",
           preset: "claude_code", // Use Claude Code's system prompt
+        },
+        stderr: (data: string) => {
+          // Log stderr from Claude Code process
+          console.error("Claude Code stderr:", data);
         },
       },
     });

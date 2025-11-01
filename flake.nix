@@ -9,7 +9,10 @@
   outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
+        pkgs = import nixpkgs {
+          inherit system;
+          config.allowUnfree = true;  # Allow unfree packages like 1password-cli
+        };
       in
       {
         devShells.default = pkgs.mkShell {
@@ -21,7 +24,7 @@
             # Development tools
             direnv
             git
-            _1password  # 1Password CLI for secrets management
+            _1password-cli  # 1Password CLI for secrets management
           ];
 
           shellHook = ''

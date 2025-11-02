@@ -2,24 +2,24 @@
 
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
+import {
+  bold,
+  cyan,
+  blue,
+  green,
+  red,
+  yellow,
+  dim,
+  bgCyan,
+  bgBlue,
+} from "@std/fmt/colors";
+import { parseArgs } from "@std/cli/parse-args";
+import { Spinner } from "@std/cli/spinner";
 
 /**
  * Interactive Claude CLI - A REPL for Claude Code Agent SDK
- * Using Streaming Input Mode for advanced features
+ * Using Streaming Input Mode for advanced features with Deno std library UI
  */
-
-// ANSI color codes for better UX
-const colors = {
-  reset: "\x1b[0m",
-  bright: "\x1b[1m",
-  dim: "\x1b[2m",
-  cyan: "\x1b[36m",
-  green: "\x1b[32m",
-  yellow: "\x1b[33m",
-  blue: "\x1b[34m",
-  magenta: "\x1b[35m",
-  red: "\x1b[31m",
-};
 
 // Message queue for streaming input
 class MessageQueue {
@@ -67,22 +67,21 @@ class MessageQueue {
 }
 
 function printWelcome() {
-  console.log(`${colors.bright}${colors.cyan}`);
-  console.log("╔═══════════════════════════════════════════════╗");
-  console.log("║   Claude Interactive CLI (Streaming Mode)    ║");
-  console.log("╚═══════════════════════════════════════════════╝");
-  console.log(colors.reset);
-  console.log(`${colors.dim}Type your message and press Enter to chat with Claude.`);
-  console.log(`Commands: /exit, /quit, /help, /clear, /image${colors.reset}\n`);
+  console.log(bold(cyan("╔═══════════════════════════════════════════════╗")));
+  console.log(bold(cyan("║   Claude Interactive CLI (Streaming Mode)    ║")));
+  console.log(bold(cyan("╚═══════════════════════════════════════════════╝")));
+  console.log();
+  console.log(dim("Type your message and press Enter to chat with Claude."));
+  console.log(dim("Commands: /exit, /quit, /help, /clear, /image\n"));
 }
 
 function printHelp() {
-  console.log(`\n${colors.bright}Available Commands:${colors.reset}`);
-  console.log(`  ${colors.cyan}/help${colors.reset}   - Show this help message`);
-  console.log(`  ${colors.cyan}/exit${colors.reset}   - Exit the CLI`);
-  console.log(`  ${colors.cyan}/quit${colors.reset}   - Exit the CLI`);
-  console.log(`  ${colors.cyan}/clear${colors.reset}  - Clear the screen`);
-  console.log(`  ${colors.cyan}/image <path>${colors.reset} - Attach an image to your next message\n`);
+  console.log("\n" + bold("Available Commands:"));
+  console.log(`  ${cyan("/help")}   - Show this help message`);
+  console.log(`  ${cyan("/exit")}   - Exit the CLI`);
+  console.log(`  ${cyan("/quit")}   - Exit the CLI`);
+  console.log(`  ${cyan("/clear")}  - Clear the screen`);
+  console.log(`  ${cyan("/image <path>")} - Attach an image to your next message\n`);
 }
 
 async function readInput(prompt: string): Promise<string | null> {
@@ -102,26 +101,50 @@ function formatToolInput(input: any): string {
     return "";
   }
 
-  // Format tool input for display - show key parameters
+  // Format tool input for display - show key parameters intelligently
   const parts: string[] = [];
+  const maxParts = 3; // Show at most 3 parameters
+  let count = 0;
 
   for (const [key, value] of Object.entries(input)) {
+    if (count >= maxParts) {
+      parts.push("...");
+      break;
+    }
+
     let displayValue: string;
 
     if (typeof value === "string") {
       // Truncate long strings
-      if (value.length > 60) {
-        displayValue = `"${value.substring(0, 60)}..."`;
+      if (value.length > 40) {
+        displayValue = `"${value.substring(0, 40)}..."`;
       } else {
         displayValue = `"${value}"`;
       }
+    } else if (Array.isArray(value)) {
+      displayValue = `[${value.length} items]`;
     } else if (typeof value === "object" && value !== null) {
-      displayValue = "{...}";
+      const objKeys = Object.keys(value);
+      if (objKeys.length > 0) {
+        displayValue = `{${objKeys.slice(0, 2).join(", ")}${objKeys.length > 2 ? "..." : ""}}`;
+      } else {
+        displayValue = "{}";
+      }
+    } else if (typeof value === "boolean") {
+      displayValue = value ? "true" : "false";
+    } else if (typeof value === "number") {
+      displayValue = String(value);
     } else {
       displayValue = String(value);
     }
 
-    parts.push(`${key}: ${displayValue}`);
+    // Shorten common parameter names
+    const shortKey = key === "file_path" ? "file" :
+                     key === "pattern" ? "pat" :
+                     key === "command" ? "cmd" : key;
+
+    parts.push(`${shortKey}: ${displayValue}`);
+    count++;
   }
 
   return parts.join(", ");
@@ -149,14 +172,53 @@ async function loadImageAsBase64(
     return { media_type, data: base64Data };
   } catch (error) {
     const err = error as Error;
-    console.error(
-      `${colors.red}Error loading image: ${err.message}${colors.reset}\n`
-    );
+    console.error(red(`Error loading image: ${err.message}\n`));
     return null;
   }
 }
 
 async function main() {
+  // Parse command-line arguments
+  const args = parseArgs(Deno.args, {
+    boolean: ["help", "version"],
+    string: ["model"],
+    alias: {
+      h: "help",
+      v: "version",
+      m: "model",
+    },
+    default: {
+      model: "claude-sonnet-4-20250514",
+    },
+  });
+
+  // Handle --help
+  if (args.help) {
+    console.log(bold("Claude Interactive CLI"));
+    console.log("\nUsage: deno task start [options]\n");
+    console.log("Options:");
+    console.log(`  ${cyan("-h, --help")}     Show this help message`);
+    console.log(`  ${cyan("-v, --version")}  Show version information`);
+    console.log(
+      `  ${cyan("-m, --model")}    Specify model (default: claude-sonnet-4-20250514)`
+    );
+    console.log("\nModels:");
+    console.log("  • claude-sonnet-4-20250514 (default)");
+    console.log("  • claude-opus-4-20250514");
+    console.log("  • claude-haiku-4-20250514");
+    Deno.exit(0);
+  }
+
+  // Handle --version
+  if (args.version) {
+    console.log("Claude Interactive CLI v1.0.0");
+    console.log("Claude Agent SDK v0.1.30");
+    console.log("Deno " + Deno.version.deno);
+    Deno.exit(0);
+  }
+
+  const modelName = args.model as string;
+
   printWelcome();
 
   const messageQueue = new MessageQueue();
@@ -164,6 +226,7 @@ async function main() {
   let queryInstance: any = null;
   let isProcessing = false;
   let sessionId = ""; // Shared session ID for message queue
+  let currentSpinner: Spinner | null = null;
 
   // Start the query with streaming input
   const startQuery = async () => {
@@ -173,7 +236,7 @@ async function main() {
         options: {
           executable: "deno",
           executableArgs: ["--allow-all"],
-          model: "claude-sonnet-4-20250514",
+          model: modelName,
           permissionMode: "bypassPermissions", // Auto-approve all tools
           systemPrompt: {
             type: "preset",
@@ -214,7 +277,7 @@ async function main() {
             if (message.subtype === "init") {
               sessionId = message.session_id;
               console.log(
-                `${colors.dim}Session: ${sessionId.slice(0, 8)}... [Streaming Mode]${colors.reset}\n`
+                dim(`Session: ${sessionId.slice(0, 8)}... [Streaming Mode]\n`)
               );
             }
             break;
@@ -242,34 +305,35 @@ async function main() {
                 // Start of text block
                 if (!currentToolUse) {
                   await Deno.stdout.write(
-                    new TextEncoder().encode(
-                      `${colors.bright}${colors.green}Claude:${colors.reset} `
-                    )
+                    new TextEncoder().encode(bold(green("Claude: ")))
                   );
                 }
               } else if (block.type === "tool_use") {
                 currentToolUse = true;
                 currentToolName = block.name;
                 currentToolInput = block.input || {};
-                // Display tool call indicator - params will show on stop
-                await Deno.stdout.write(
-                  new TextEncoder().encode(
-                    `${colors.dim}→ ${colors.cyan}${currentToolName}${colors.reset}`
-                  )
-                );
+
+                // Start spinner for tool execution
+                currentSpinner = new Spinner({
+                  message: `${currentToolName}`,
+                  color: "cyan",
+                });
+                currentSpinner.start();
               }
             } else if (message.event.type === "content_block_stop") {
               if (currentToolUse) {
-                // Show complete tool call with accumulated parameters
+                // Stop spinner and show tool call result
+                if (currentSpinner) {
+                  currentSpinner.stop();
+                  currentSpinner = null;
+                }
+
+                // Show complete tool call with checkmark for completed tool
                 const formattedInput = formatToolInput(currentToolInput);
                 if (formattedInput) {
-                  await Deno.stdout.write(
-                    new TextEncoder().encode(
-                      `${colors.dim}(${formattedInput})${colors.reset}\n`
-                    )
-                  );
+                  console.log(green("✓") + dim(` ${cyan(currentToolName)}(${formattedInput})`));
                 } else {
-                  await Deno.stdout.write(new TextEncoder().encode("\n"));
+                  console.log(green("✓") + dim(` ${cyan(currentToolName)}`));
                 }
                 currentToolName = "";
                 currentToolInput = {};
@@ -296,20 +360,20 @@ async function main() {
             isProcessing = false;
             if (message.subtype === "success") {
               console.log(
-                `${colors.dim}[${(message.duration_ms / 1000).toFixed(2)}s | $${message.total_cost_usd.toFixed(4)} | ${message.usage.input_tokens}→${message.usage.output_tokens} tokens]${colors.reset}\n`
+                dim(
+                  `[${(message.duration_ms / 1000).toFixed(2)}s | $${message.total_cost_usd.toFixed(4)} | ${message.usage.input_tokens}→${message.usage.output_tokens} tokens]\n`
+                )
               );
               assistantResponse = "";
             } else {
-              console.error(
-                `${colors.red}✗ Query failed: ${message.subtype}${colors.reset}\n`
-              );
+              console.error(red(`✗ Query failed: ${message.subtype}\n`));
             }
             break;
         }
       }
     } catch (error) {
       const err = error as Error;
-      console.error(`${colors.red}Error: ${err.message}${colors.reset}\n`);
+      console.error(red(`Error: ${err.message}\n`));
       isProcessing = false;
     }
   };
@@ -319,9 +383,7 @@ async function main() {
 
   // Interactive REPL loop
   while (true) {
-    const input = await readInput(
-      `${colors.bright}${colors.blue}You:${colors.reset} `
-    );
+    const input = await readInput(bold(blue("You: ")));
 
     // Handle EOF (Ctrl+D or pipe closed)
     if (input === null) {
@@ -329,7 +391,7 @@ async function main() {
       if (queryInstance?.interrupt) {
         await queryInstance.interrupt();
       }
-      console.log(`\n${colors.cyan}Goodbye!${colors.reset}`);
+      console.log("\n" + cyan("Goodbye!"));
       Deno.exit(0);
     }
 
@@ -346,7 +408,7 @@ async function main() {
       if (queryInstance?.interrupt) {
         await queryInstance.interrupt();
       }
-      console.log(`\n${colors.cyan}Goodbye! 👋${colors.reset}`);
+      console.log("\n" + cyan("Goodbye! 👋"));
       Deno.exit(0);
     } else if (command === "/help") {
       printHelp();
@@ -360,12 +422,8 @@ async function main() {
       const imageData = await loadImageAsBase64(imagePath);
       if (imageData) {
         pendingImage = imageData;
-        console.log(
-          `${colors.green}✓ Image loaded: ${imagePath}${colors.reset}`
-        );
-        console.log(
-          `${colors.dim}Your next message will include this image${colors.reset}\n`
-        );
+        console.log(green(`✓ Image loaded: ${imagePath}`));
+        console.log(dim("Your next message will include this image\n"));
       }
       continue;
     }
@@ -388,9 +446,7 @@ async function main() {
           data: pendingImage.data,
         },
       });
-      console.log(
-        `${colors.dim}Including attached image in message${colors.reset}\n`
-      );
+      console.log(dim("Including attached image in message\n"));
       pendingImage = null;
     }
 

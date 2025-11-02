@@ -1,7 +1,17 @@
 {
   "version": "5",
   "specifiers": {
+    "jsr:@std/cli@^1.0.9": "1.0.23",
+    "jsr:@std/fmt@^1.0.3": "1.0.8",
     "npm:@anthropic-ai/claude-agent-sdk@latest": "0.1.30_zod@3.25.76"
+  },
+  "jsr": {
+    "@std/cli@1.0.23": {
+      "integrity": "bf95b7a9425ba2af1ae5a6359daf58c508f2decf711a76ed2993cd352498ccca"
+    },
+    "@std/fmt@1.0.8": {
+      "integrity": "71e1fc498787e4434d213647a6e43e794af4fd393ef8f52062246e06f7e372b7"
+    }
   },
   "npm": {
     "@anthropic-ai/claude-agent-sdk@0.1.30_zod@3.25.76": {
@@ -94,6 +104,8 @@
   },
   "workspace": {
     "dependencies": [
+      "jsr:@std/cli@^1.0.9",
+      "jsr:@std/fmt@^1.0.3",
       "npm:@anthropic-ai/claude-agent-sdk@latest"
     ]
   }

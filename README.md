@@ -57,6 +57,31 @@ See [docs/SETUP.md](docs/SETUP.md) for detailed installation instructions.
 deno task start
 ```
 
+### Command-Line Options
+
+The CLI supports several command-line arguments:
+
+```bash
+# Show help
+deno task start -- --help
+
+# Show version information
+deno task start -- --version
+
+# Specify a different model
+deno task start -- --model claude-opus-4-20250514
+```
+
+**Available options:**
+- `-h, --help` - Show help message and exit
+- `-v, --version` - Show version information and exit
+- `-m, --model MODEL` - Specify Claude model (default: claude-sonnet-4-20250514)
+
+**Available models:**
+- `claude-sonnet-4-20250514` (default) - Balanced performance and speed
+- `claude-opus-4-20250514` - Most capable model
+- `claude-haiku-4-20250514` - Fastest model
+
 ### Interactive Commands
 
 Once the CLI is running, you can use these commands:
@@ -76,11 +101,18 @@ Once the CLI is running, you can use these commands:
 Type your message and press Enter to chat with Claude.
 Commands: /exit, /quit, /help, /clear, /image
 
-You: What is 2 + 2?
+You: List files in this directory
 Session: acdf0652... [Streaming Mode]
 
-Claude: 2 + 2 = 4
-[2.16s | $0.0009 | 3→13 tokens]
+Claude: I'll list the files in the current directory for you.
+⠋ Bash  ← Animated spinner while tool executes
+✓ Bash  ← Green checkmark when complete
+Claude: Here are the files and directories:
+- deno.json - Configuration file
+- main.ts - Main application
+- README.md - Documentation
+...
+[5.23s | $0.0042 | 9→256 tokens]
 
 You: /exit
 
@@ -114,10 +146,13 @@ The interactive CLI includes:
 - **Image Support**: Attach images to messages using the `/image` command with base64 encoding
 - **Real-time Streaming**: Partial message streaming with `includePartialMessages` for live responses
 - **Session Management**: Persistent session tracking across multiple message turns
-- **Color-coded Output**: Better readability with ANSI color codes
+- **Deno std/fmt Colors**: Professional terminal colors using `@std/fmt/colors` module
+- **Tool Execution Spinners**: Animated spinners show real-time tool execution progress
+- **Tool Status Indicators**: Green checkmarks (✓) display when tools complete successfully
+- **Smart Parameter Display**: Intelligent tool parameter formatting with truncation
+- **Command-line Arguments**: Support for `--help`, `--version`, and `--model` flags
 - **Cost Tracking**: Display duration, cost, and token usage for each interaction
 - **Graceful EOF Handling**: Properly handles piped input and interactive mode
-- **Command History**: Use arrow keys to navigate previous commands (interactive mode)
 
 ## Configuration
 

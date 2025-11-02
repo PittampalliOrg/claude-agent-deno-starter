@@ -3,6 +3,10 @@
     "start": "deno run --allow-all main.ts"
   },
   "imports": {
-    "@anthropic-ai/claude-agent-sdk": "npm:@anthropic-ai/claude-agent-sdk@latest"
+    "@anthropic-ai/claude-agent-sdk": "npm:@anthropic-ai/claude-agent-sdk@latest",
+    "@std/fmt/colors": "jsr:@std/fmt@^1.0.3/colors",
+    "@std/cli/parse-args": "jsr:@std/cli@^1.0.9/parse-args",
+    "@std/cli/spinner": "jsr:@std/cli@^1.0.9/unstable-spinner",
+    "@std/cli/unicode-width": "jsr:@std/cli@^1.0.9/unicode-width"
   }
 }
